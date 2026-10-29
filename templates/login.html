@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 直播中控台</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #f5f6fa; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+        .login-box { background:#fff; padding:40px; border-radius:12px; box-shadow: 0 4px 20px rgba(0,0,0,.1); width:360px; text-align:center; }
+        .login-box h1 { font-size:20px; margin-bottom:8px; }
+        .login-box p { color:#636e72; font-size:13px; margin-bottom:24px; }
+        .login-box input { width:100%; padding:10px 14px; border:1px solid #dfe6e9; border-radius:8px; font-size:14px; margin-bottom:12px; }
+        .login-box input:focus { outline:none; border-color:#6c5ce7; box-shadow:0 0 0 3px rgba(108,92,231,.15); }
+        .login-box button { width:100%; padding:10px; background:#6c5ce7; color:#fff; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-weight:600; }
+        .login-box button:hover { background:#5a4bd1; }
+        .error { color:#e17055; font-size:13px; margin-bottom:12px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>直播中控台</h1>
+        <p>请输入访问密码</p>
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <input type="password" name="password" placeholder="密码" autofocus>
+            <button type="submit">登录</button>
+        </form>
+    </div>
+</body>
+</html>

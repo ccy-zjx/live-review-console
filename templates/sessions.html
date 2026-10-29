@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}直播场次 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📡 直播场次管理</h1>
+    <p>记录每次直播数据 | 支持复制、编辑、删除</p>
+</div>
+
+<div class="card">
+    <div class="card-header"><h2>+ 快速开播</h2></div>
+    <form method="POST" action="{{ url_for('session_add') }}">
+        <div class="grid-3">
+            <div class="form-group">
+                <label>日期</label>
+                <input type="date" name="session_date" id="today_date" required>
+            </div>
+            <div class="form-group">
+                <label>开始时间</label>
+                <input type="time" name="start_time">
+            </div>
+            <div class="form-group">
+                <label>平台</label>
+                <select name="platform">
+                    <option>抖音</option><option>淘宝</option><option>快手</option><option>微信视频号</option>
+                </select>
+            </div>
+            <div class="form-group"><label>主播</label><input type="text" name="host_name" placeholder="主播名"></div>
+            <div class="form-group"><label>总观看人数</label><input type="number" name="total_viewers" value="0"></div>
+            <div class="form-group"><label>峰值在线</label><input type="number" name="peak_online" value="0"></div>
+            <div class="form-group"><label>总订单数</label><input type="number" name="total_orders" value="0"></div>
+            <div class="form-group"><label>总 GMV (元)</label><input type="number" step="0.01" name="total_gmv" value="0"></div>
+            <div class="form-group"><label>结束时间</label><input type="time" name="end_time"></div>
+            <div class="form-group"><label>备注</label><input type="text" name="notes" placeholder="如：双11专场"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">创建场次</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>场次列表 ({{ sessions|length }})</h2>
+        <a href="{{ url_for('export_csv', data_type='sessions') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+    </div>
+    {% if sessions %}
+    <table>
+        <tr><th>ID</th><th>日期</th><th>时间</th><th>平台</th><th>主播</th><th>观看</th><th>峰值</th><th>订单</th><th>GMV</th><th>操作</th><th>复盘</th></tr>
+        {% for s in sessions %}
+        <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ s.session_date }}</td>
+            <td>{{ s.start_time or '-' }} ~ {{ s.end_time or '-' }}</td>
+            <td><span class="badge badge-info">{{ s.platform }}</span></td>
+            <td>{{ s.host_name or '-' }}</td>
+            <td>{{ s.total_viewers }}</td>
+            <td>{{ s.peak_online }}</td>
+            <td><strong>{{ s.total_orders }}</strong></td>
+            <td><strong>{{ s.total_gmv }}</strong></td>
+            <td>{{ (s.notes or '-')[:15] }}</td>
+            <td>
+                <button class="btn btn-outline btn-xs" onclick="openEdit({{ s.id }})">编辑</button>
+                <form class="inline-form" method="POST" action="{{ url_for('session_copy', sid=s.id) }}" style="display:inline;">
+                    <button class="btn btn-outline btn-xs">复制</button>
+                </form>
+                <form class="inline-form" method="POST" action="{{ url_for('session_delete', sid=s.id) }}" onsubmit="return confirm('确定删除?')" style="display:inline;">
+                    <button class="btn btn-danger btn-xs">删除</button>
+                </form>
+            </td>
+            <td><a href="{{ url_for('review_session', sid=s.id) }}" class="btn btn-primary btn-xs">复盘</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty"><div class="emoji">📡</div>暂无场次</div>
+    {% endif %}
+</div>
+
+<!-- 编辑弹窗 -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <h2>编辑场次 <span id="editIdLabel"></span></h2>
+        <form method="POST" id="editForm">
+            <div class="grid-3">
+                <div class="form-group"><label>日期</label><input type="date" name="session_date" id="edit_date"></div>
+                <div class="form-group"><label>开始时间</label><input type="time" name="start_time" id="edit_start"></div>
+                <div class="form-group"><label>结束时间</label><input type="time" name="end_time" id="edit_end"></div>
+                <div class="form-group"><label>平台</label><select name="platform" id="edit_platform">
+                    <option>抖音</option><option>淘宝</option><option>快手</option><option>微信视频号</option>
+                </select></div>
+                <div class="form-group"><label>主播</label><input type="text" name="host_name" id="edit_host"></div>
+                <div class="form-group"><label>总观看人数</label><input type="number" name="total_viewers" id="edit_viewers"></div>
+                <div class="form-group"><label>峰值在线</label><input type="number" name="peak_online" id="edit_peak"></div>
+                <div class="form-group"><label>总订单数</label><input type="number" name="total_orders" id="edit_orders"></div>
+                <div class="form-group"><label>总 GMV (元)</label><input type="number" step="0.01" name="total_gmv" id="edit_gmv"></div>
+                <div class="form-group"><label>备注</label><input type="text" name="notes" id="edit_notes"></div>
+            </div>
+            <div class="flex" style="gap:12px; margin-top:16px;">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <button type="button" class="btn btn-outline" onclick="closeEdit()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+document.getElementById('today_date').value = new Date().toISOString().split('T')[0];
+
+function openEdit(sid) {
+    // AJAX 加载场次数据
+    fetch('/api/session/' + sid)
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('editIdLabel').textContent = '#' + d.id;
+            document.getElementById('editForm').action = '/sessions/' + d.id + '/edit';
+            document.getElementById('edit_date').value = d.session_date || '';
+            document.getElementById('edit_start').value = d.start_time || '';
+            document.getElementById('edit_end').value = d.end_time || '';
+            document.getElementById('edit_platform').value = d.platform || '抖音';
+            document.getElementById('edit_host').value = d.host_name || '';
+            document.getElementById('edit_viewers').value = d.total_viewers || 0;
+            document.getElementById('edit_peak').value = d.peak_online || 0;
+            document.getElementById('edit_orders').value = d.total_orders || 0;
+            document.getElementById('edit_gmv').value = d.total_gmv || 0;
+            document.getElementById('edit_notes').value = d.notes || '';
+            document.getElementById('editModal').classList.add('show');
+        })
+        .catch(err => alert('加载失败: ' + err));
+}
+
+function closeEdit() {
+    document.getElementById('editModal').classList.remove('show');
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEdit();
+});
+</script>
+{% endblock %}

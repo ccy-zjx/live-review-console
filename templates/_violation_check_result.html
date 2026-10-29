@@ -1,0 +1,21 @@
+{% if hits %}
+<div class="check-result unsafe">
+    <h3 style="color:#e17055;">⚠ 发现 {{ hits|length }} 个违规词!</h3>
+    <table style="margin-top:12px;">
+        <tr><th>违规词</th><th>分类</th><th>严重度</th><th>替代说法</th></tr>
+        {% for h in hits %}
+        <tr>
+            <td><strong class="text-danger">{{ h.keyword }}</strong></td>
+            <td><span class="badge badge-warning">{{ h.category }}</span></td>
+            <td><span class="badge badge-danger">{{ h.severity }}</span></td>
+            <td>{{ h.alternative or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<div class="check-result safe">
+    <h3 style="color:#00b894;">✓ 安全 — 未发现违规词</h3>
+    <p class="text-muted">检查文本: "{{ text[:100] }}"</p>
+</div>
+{% endif %}

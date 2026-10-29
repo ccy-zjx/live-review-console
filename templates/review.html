@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}复盘 - {{ session.session_date }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 场次复盘 #{{ session.id }}</h1>
+    <p>{{ session.session_date }} | {{ session.start_time or '?' }}~{{ session.end_time or '?' }} | {{ session.platform }}</p>
+</div>
+
+<!-- 关键指标 -->
+<div class="stats-row">
+    <div class="stat-card"><div class="value">{{ session.total_viewers }}</div><div class="label">观看人数</div></div>
+    <div class="stat-card"><div class="value">{{ session.peak_online }}</div><div class="label">峰值在线</div></div>
+    <div class="stat-card"><div class="value">{{ session.total_orders }}</div><div class="label">总订单</div></div>
+    <div class="stat-card"><div class="value">{{ "%.0f" % session.total_gmv if session.total_gmv else 0 }}</div><div class="label">GMV (元)</div></div>
+    {% if session.notes %}<div class="stat-card"><div class="value" style="font-size:14px;">{{ session.notes[:30] }}</div><div class="label">备注</div></div>{% endif %}
+</div>
+
+<!-- 场景时间线 -->
+<div class="card">
+    <div class="card-header"><h2>⏱ 场景时间线 ({{ scenarios|length }})</h2></div>
+    {% if scenarios %}
+    {% for s in scenarios %}
+    <div class="card" style="margin-bottom:12px; padding:16px; border-left:4px solid {% if s.conversion_rate_delta and s.conversion_rate_delta > 10 %}#00b894{% elif s.conversion_rate_delta and s.conversion_rate_delta > 3 %}#6c5ce7{% else %}#dfe6e9{% endif %};">
+        <div class="flex-between">
+            <div>
+                <span class="badge badge-purple">{{ s.scenario_type or '?' }}</span>
+                <span class="text-muted" style="margin-left:8px;">{{ s.timestamp or '无时间' }}</span>
+            </div>
+            <div>
+                <span style="font-size:12px;color:#999;">{{ s.before_orders or 0 }} → </span>
+                <strong style="color:#00b894;">{{ s.after_orders or 0 }}单</strong>
+                <span class="badge badge-success">+{{ s.conversion_rate_delta or 0 }}</span>
+            </div>
+        </div>
+        <p style="margin-top:8px; font-size:14px;"><strong>触发动作：</strong>{{ s.trigger_action or '-' }}</p>
+        {% if s.script_text %}
+        <div style="background:#f8f9fa; padding:8px; border-radius:6px; margin-top:8px; font-size:13px;">
+            <strong>使用话术 ({{ s.version or '?' }})：</strong>{{ s.script_text[:150] }}{% if s.script_text|length > 150 %}...{% endif %}
+            {% if s.effectiveness_score %}<span style="color:#6c5ce7;"> [评分: {{ s.effectiveness_score }}]</span>{% endif %}
+        </div>
+        {% endif %}
+        {% if s.chat_atmosphere %}<p class="text-muted" style="font-size:12px; margin-top:4px;">弹幕氛围: {{ s.chat_atmosphere }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty"><div class="emoji">⏱</div>本场暂无场景记录</div>
+    {% endif %}
+</div>
+
+<a href="{{ url_for('sessions_list') }}" class="btn btn-outline">← 返回场次列表</a>
+{% endblock %}

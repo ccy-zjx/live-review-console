@@ -1,0 +1,53 @@
+<div class="card mt-8">
+    <div class="card-header">
+        <h2>预览: {{ filename }} ({{ total }} 条)</h2>
+    </div>
+    <div style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+        <table>
+            <tr>
+                {% for col in columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+            </tr>
+            {% for row in rows[:50] %}
+            <tr>
+                {% for col in columns %}
+                <td>{{ row[col] or '' }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% if total > 50 %}
+    <p class="text-muted mt-8">... 还有 {{ total - 50 }} 条未显示</p>
+    {% endif %}
+    <div class="mt-8">
+        <button class="btn btn-primary" onclick="executeImport('{{ import_type }}')">确认导入 {{ total }} 条</button>
+        <span id="import-status" class="text-muted" style="margin-left:12px;"></span>
+    </div>
+</div>
+<script>
+var previewData = {{ rows | tojson | safe }};
+function executeImport(type) {
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '导入中...';
+    document.getElementById('import-status').textContent = '';
+    fetch('/import/execute', {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: 'type=' + encodeURIComponent(type) + '&data=' + encodeURIComponent(JSON.stringify(previewData))
+    })
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById('import-status').textContent =
+            '导入成功: ' + d.imported + ' 条' + (d.skipped ? ', 跳过重复: ' + d.skipped + ' 条' : '');
+        btn.textContent = '导入完成';
+    })
+    .catch(err => {
+        document.getElementById('import-status').textContent = '导入失败: ' + err;
+        btn.disabled = false;
+        btn.textContent = '确认导入 ' + previewData.length + ' 条';
+    });
+}
+</script>

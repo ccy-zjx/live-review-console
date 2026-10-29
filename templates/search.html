@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}实时检索 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔍 实时检索</h1>
+    <p>直播中快速搜索问题、话术、违规词</p>
+</div>
+
+<!-- 搜索框 -->
+<div class="card">
+    <form method="GET" action="{{ url_for('search_page') }}">
+        <div class="search-bar">
+            <input type="text" name="q" value="{{ keyword or '' }}" placeholder="输入关键词搜索（问题/话术/违规词/案例）..." autofocus>
+            <button type="submit" class="btn btn-primary">搜索</button>
+        </div>
+    </form>
+</div>
+
+{% if results %}
+<div class="grid-2">
+    <!-- 问题结果 -->
+    {% if results.questions %}
+    <div class="card">
+        <div class="card-header"><h2>❓ 问题 ({{ results.questions|length }})</h2></div>
+        <table>
+            <tr><th>问题</th><th>分类</th><th>频次</th></tr>
+            {% for q in results.questions %}
+            <tr>
+                <td><a href="{{ url_for('question_detail', qid=q.id) }}">{{ q.question_text[:40] }}</a></td>
+                <td><span class="badge badge-purple">{{ q.category or '-' }}</span></td>
+                <td>{{ q.frequency }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 话术结果 -->
+    {% if results.response_scripts %}
+    <div class="card">
+        <div class="card-header"><h2>📝 话术 ({{ results.response_scripts|length }})</h2></div>
+        {% for s in results.response_scripts %}
+        <div class="card" style="margin-bottom:8px; padding:12px;">
+            <div class="flex-between">
+                <strong>{{ (s.question_text or '')[:30] }}</strong>
+                <span class="badge badge-info">{{ s.version }}</span>
+            </div>
+            <p style="font-size:13px; margin-top:6px;">{{ s.script_text[:100] }}</p>
+            <p class="text-muted" style="font-size:11px;">评分: {{ s.effectiveness_score }} | 使用: {{ s.usage_count }}次 | {{ s.script_type }} / {{ s.tone }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 违规词结果 -->
+    {% if results.violation_rules %}
+    <div class="card">
+        <div class="card-header"><h2>🚫 违规词 ({{ results.violation_rules|length }})</h2></div>
+        <table>
+            <tr><th>违规词</th><th>分类</th><th>严重度</th><th>替代</th></tr>
+            {% for v in results.violation_rules %}
+            <tr>
+                <td class="text-danger"><strong>{{ v.keyword }}</strong></td>
+                <td><span class="badge badge-warning">{{ v.category }}</span></td>
+                <td><span class="badge badge-danger">{{ v.severity }}</span></td>
+                <td>{{ v.alternative or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- 案例结果 -->
+    {% if results.violation_cases %}
+    <div class="card">
+        <div class="card-header"><h2>📋 违规案例 ({{ results.violation_cases|length }})</h2></div>
+        {% for c in results.violation_cases %}
+        <div class="card" style="margin-bottom:8px; padding:12px;">
+            <strong>{{ c.case_title }}</strong>
+            <span class="badge badge-danger">{{ c.violation_type }}</span>
+            <p class="text-muted" style="font-size:12px;">品牌: {{ c.brand_name }} | 处罚: {{ c.penalty }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% elif keyword %}
+<div class="empty"><div class="emoji">🔍</div>未找到与 "{{ keyword }}" 相关的结果</div>
+{% else %}
+<div class="empty">
+    <div class="emoji">🔍</div>
+    <p>输入关键词开始搜索</p>
+    <p class="text-muted">例如: "味道" "发货" "效果" "第一"</p>
+</div>
+{% endif %}
+{% endblock %}

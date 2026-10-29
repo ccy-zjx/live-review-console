@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}日报 - {{ data.date }}{% endblock %}
+{% block content %}
+<div class="page-header"><h1>📊 日报 {{ data.date }}</h1><p>今日直播汇总 | 数据驱动复盘</p></div>
+
+<div class="stats-row">
+    <div class="stat-card"><div class="value">{{ data.sessions|length }}</div><div class="label">今日场次</div></div>
+    <div class="stat-card"><div class="value">{{ data.total_viewers }}</div><div class="label">总观看</div></div>
+    <div class="stat-card"><div class="value">{{ data.total_orders }}</div><div class="label">总订单</div></div>
+    <div class="stat-card"><div class="value">{{ "%.0f" % data.total_gmv if data.total_gmv else 0 }}</div><div class="label">总 GMV</div></div>
+</div>
+
+<div class="grid-2">
+    <!-- 今日场次 -->
+    <div class="card">
+        <div class="card-header"><h2>📡 今日场次</h2></div>
+        {% for s in data.sessions %}
+        <div style="padding:8px 0; border-bottom:1px solid #eee;">
+            <div class="flex-between">
+                <span><strong>{{ s.host_name or '未指定' }}</strong> {{ s.start_time or '' }}~{{ s.end_time or '' }}</span>
+                <span>👁 {{ s.total_viewers }} | 📦 {{ s.total_orders }} | 💰 {{ s.total_gmv }}</span>
+            </div>
+            {% if s.notes %}<span class="text-muted" style="font-size:12px;">{{ s.notes[:40] }}</span>{% endif %}
+        </div>
+        {% else %}<div class="empty">暂无今日场次</div>{% endfor %}
+    </div>
+
+    <!-- 今日爆点 -->
+    <div class="card">
+        <div class="card-header"><h2>🔥 今日爆点</h2></div>
+        {% for s in data.scenarios[:5] %}
+        <div style="padding:8px 0; border-bottom:1px solid #eee;">
+            <div class="flex-between">
+                <span class="badge badge-purple">{{ s.scenario_type }}</span>
+                <strong style="color:#00b894;">+{{ s.conversion_rate_delta }}</strong>
+            </div>
+            <p style="font-size:13px; margin-top:4px;">{{ (s.trigger_action or '-')[:60] }}</p>
+        </div>
+        {% else %}<div class="empty">暂无爆点记录</div>{% endfor %}
+    </div>
+
+    <!-- 主播表现 -->
+    <div class="card">
+        <div class="card-header"><h2>👤 主播排行 (累计)</h2></div>
+        {% if hosts %}
+        <table>
+            <tr><th>主播</th><th>场次</th><th>总订单</th><th>总GMV</th><th>均观看</th><th>均峰值</th></tr>
+            {% for h in hosts %}
+            <tr>
+                <td><strong>{{ h.host_name }}</strong></td>
+                <td>{{ h.session_count }}</td>
+                <td>{{ h.total_orders }}</td>
+                <td>{{ "%.0f" % (h.total_gmv or 0) }}</td>
+                <td>{{ "%.0f" % (h.avg_viewers or 0) }}</td>
+                <td>{{ "%.0f" % (h.avg_peak or 0) }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}<div class="empty">暂无主播数据</div>{% endif %}
+    </div>
+
+    <!-- 速查入口 -->
+    <div class="card">
+        <div class="card-header"><h2>⚡ 快速入口</h2></div>
+        <div class="flex" style="flex-wrap:wrap;gap:8px;">
+            <a href="{{ url_for('sessions_list') }}" class="btn btn-outline btn-sm">+ 新场次</a>
+            <a href="{{ url_for('scenarios_list') }}" class="btn btn-outline btn-sm">+ 记录场景</a>
+            <a href="{{ url_for('cheat_sheet') }}" class="btn btn-outline btn-sm">📋 速查表</a>
+            <a href="{{ url_for('export_csv', data_type='sessions') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

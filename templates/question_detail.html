@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ question.question_text[:20] }} - 问题详情{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>❓ {{ question.question_text }}</h1>
+    <p>
+        <span class="badge badge-purple">{{ question.category or '未分类' }}</span>
+        频次: <strong>{{ question.frequency }}</strong>
+        难度: {{ question.difficulty }}
+        {% if question.is_sensitive %}<span class="badge badge-danger">敏感</span>{% endif %}
+        首次: {{ question.first_seen }} | 最近: {{ question.last_seen }}
+    </p>
+</div>
+
+<!-- 关联话术 -->
+<div class="card">
+    <div class="card-header">
+        <h2>📝 关联话术 ({{ scripts|length }})</h2>
+        <a href="{{ url_for('scripts_list') }}" class="btn btn-primary btn-sm">+ 添加话术</a>
+    </div>
+    {% if scripts %}
+    <table>
+        <tr><th>版本</th><th>话术内容</th><th>类型</th><th>语气</th><th>评分</th><th>使用次数</th><th>操作</th></tr>
+        {% for s in scripts %}
+        <tr>
+            <td><span class="badge badge-info">{{ s.version }}</span></td>
+            <td>{{ s.script_text[:60] }}{% if s.script_text|length > 60 %}...{% endif %}</td>
+            <td>{{ s.script_type }}</td>
+            <td>{{ s.tone }}</td>
+            <td>{{ "⭐" * ((s.effectiveness_score|int)//1) }} {{ s.effectiveness_score }}</td>
+            <td>{{ s.usage_count }}</td>
+            <td>
+                <button class="btn btn-outline btn-xs" onclick="useScript({{ s.id }})">使用</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty"><div class="emoji">📝</div>暂无关联话术，<a href="{{ url_for('scripts_list') }}">去添加</a></div>
+    {% endif %}
+</div>
+
+<a href="{{ url_for('questions_list') }}" class="btn btn-outline">← 返回问题库</a>
+
+{% block extra_scripts %}
+<script>
+function useScript(sid) {
+    fetch('/scripts/' + sid + '/use', {method:'POST'}).then(r=>r.json()).then(d=>{
+        if(d.status=='ok') alert('已记录使用!');
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

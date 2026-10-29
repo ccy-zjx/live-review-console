@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}话术库 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📝 话术库</h1>
+    <p>管理应答话术，支持多版本对比和 A/B 测试</p>
+</div>
+
+<!-- 新增话术 -->
+<div class="card">
+    <div class="card-header"><h2>+ 录入话术</h2></div>
+    <form method="POST" action="{{ url_for('script_add') }}">
+        <div class="grid-3">
+            <div class="form-group">
+                <label>关联问题 *</label>
+                <select name="question_id" required>
+                    <option value="">-- 选择 --</option>
+                    {% for q in questions %}
+                    <option value="{{ q.id }}">{{ q.question_text[:30] }} (频次:{{ q.frequency }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>版本号</label>
+                <input type="text" name="version" value="v1.0" placeholder="v1.0, v2.0">
+            </div>
+            <div class="form-group">
+                <label>话术类型</label>
+                <select name="script_type">
+                    <option>标准应答</option><option>促单话术</option><option>逼单话术</option><option>危机应答</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>语气</label>
+                <select name="tone">
+                    <option>专业</option><option>亲切</option><option>紧迫</option><option>共情</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>主播/作者</label>
+                <input type="text" name="author" placeholder="主播名">
+            </div>
+            <div class="form-group">
+                <label>效果评分 (1-5)</label>
+                <input type="number" step="0.1" name="effectiveness_score" value="3.0" min="1" max="5">
+            </div>
+            <div class="form-group">
+                <label>话术全文 *</label>
+                <textarea name="script_text" required placeholder="完整的话术文本..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>备注</label>
+                <input type="text" name="notes" placeholder="使用场景说明">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">录入话术</button>
+    </form>
+</div>
+
+<!-- 话术列表 -->
+<div class="card">
+    <div class="card-header">
+        <h2>话术列表 ({{ scripts|length }})</h2>
+        <a href="{{ url_for('export_csv', data_type='scripts') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+    </div>
+    {% if scripts %}
+    <table>
+        <tr><th>ID</th><th>问题</th><th>版本</th><th>话术</th><th>类型</th><th>语气</th><th>评分</th><th>使用次数</th><th>操作</th></tr>
+        {% for s in scripts %}
+        <tr>
+            <td>{{ s.id }}</td>
+            <td>{{ (s.question_text or '')[:20] }}</td>
+            <td><span class="badge badge-info">{{ s.version }}</span></td>
+            <td>{{ s.script_text[:45] }}{% if s.script_text|length > 45 %}...{% endif %}</td>
+            <td>{{ s.script_type }}</td>
+            <td>{{ s.tone }}</td>
+            <td><strong>{{ s.effectiveness_score }}</strong></td>
+            <td>{{ s.usage_count }}</td>
+            <td class="flex">
+                <button class="btn btn-success btn-xs" onclick="copyScript(this, '{{ s.script_text }}')">复制</button>
+                <button class="btn btn-outline btn-xs" onclick="useScript({{ s.id }})">使用</button>
+                <form class="inline-form" method="POST" action="{{ url_for('script_delete', sid=s.id) }}" onsubmit="return confirm('确定删除?')">
+                    <button class="btn btn-danger btn-xs">删除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty"><div class="emoji">📝</div>暂有话术</div>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+function useScript(sid) {
+    fetch('/scripts/' + sid + '/use', {method:'POST'}).then(r=>r.json()).then(d=>{
+        if(d.status=='ok') { location.reload(); }
+    });
+}
+function copyScript(btn, text) {
+    navigator.clipboard.writeText(text).then(()=>{
+        var orig = btn.textContent;
+        btn.textContent = '已复制!';
+        btn.style.background = '#00b894';
+        setTimeout(()=>{ btn.textContent = orig; btn.style.background = ''; }, 1500);
+    });
+}
+</script>
+{% endblock %}

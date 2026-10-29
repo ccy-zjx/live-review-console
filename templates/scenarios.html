@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}高转化场景 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🔥 高转化场景</h1>
+    <p>记录转化飙升时刻 | 关联话术追溯爆点 | 点击「编辑」完善数据</p>
+</div>
+
+<!-- 新增场景 -->
+<div class="card">
+    <div class="card-header"><h2>+ 记录转化场景</h2></div>
+    <form method="POST" action="{{ url_for('scenario_add') }}">
+        <div class="grid-3">
+            <div class="form-group"><label>关联场次 *</label><select name="session_id" required id="add_session">
+                <option value="">-- 选择 --</option>
+                {% for s in sessions %}<option value="{{ s.id }}">{{ s.session_date }} (#{{ s.id }})</option>{% endfor %}
+            </select></div>
+            <div class="form-group"><label>发生时间</label><input type="time" name="timestamp"></div>
+            <div class="form-group"><label>场景类型</label><select name="scenario_type">
+                <option>限时秒杀</option><option>痛点讲解</option><option>功能演示</option>
+                <option>信任背书</option><option>价格锚点</option><option>逼单话术</option>
+                <option>观众互动</option><option>其他</option>
+            </select></div>
+            <div class="form-group"><label>🔥 爆点描述（主播做了什么导致转化飙升）</label>
+                <textarea name="trigger_action" rows="2" placeholder="例如：展示了香薰的除异味效果，弹幕开始刷'想买'，主播顺势说'拍一发三限时福利'"></textarea></div>
+            <div class="form-group"><label>📝 对标话术（可选）</label><select name="script_id" id="add_script_select"><option value="">-- 加载中 --</option></select></div>
+            <div class="form-group"><label>触发前订单数</label><input type="number" name="before_orders" value="0"></div>
+            <div class="form-group"><label>触发后订单数</label><input type="number" name="after_orders" value="0"></div>
+            <div class="form-group"><label>转化提升 (自动计算)</label><input type="number" name="conversion_rate_delta" value="0"></div>
+            <div class="form-group"><label>弹幕氛围</label><input type="text" name="chat_atmosphere" placeholder="如：热烈刷屏、都在问链接"></div>
+            <div class="form-group"><label>标签</label><input type="text" name="tags" placeholder="爆点,高转化,可复用"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">记录场景</button>
+    </form>
+</div>
+
+<!-- 场景列表 -->
+<div class="card">
+    <div class="card-header">
+        <h2>场景列表 ({{ scenarios|length }})</h2>
+        <a href="{{ url_for('export_csv', data_type='scenarios') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+    </div>
+    {% if scenarios %}
+    {% for s in scenarios %}
+    <div class="card" style="margin-bottom:10px; padding:14px; border-left:4px solid {% if (s.conversion_rate_delta or 0) > 10 %}#00b894{% elif (s.conversion_rate_delta or 0) > 3 %}#6c5ce7{% else %}#dfe6e9{% endif %};">
+        <div class="flex-between" style="margin-bottom:6px;">
+            <div class="flex" style="gap:8px;">
+                <strong>#{{ s.id }}</strong>
+                <span class="badge badge-purple">{{ s.scenario_type or '?' }}</span>
+                <span class="text-muted" style="font-size:12px;">{{ s.get('session_date', '-') }} {{ s.timestamp or '' }}</span>
+            </div>
+            <div class="flex" style="gap:8px;">
+                <span style="font-size:12px;color:#999;">{{ s.before_orders or 0 }}单 → </span>
+                <strong style="color:#00b894;font-size:16px;">{{ s.after_orders or 0 }}单</strong>
+                <span class="badge badge-success">+{{ s.conversion_rate_delta or 0 }}</span>
+            </div>
+        </div>
+        <p style="font-size:13px; color:#555; margin-bottom:4px;"><strong>🔥 爆点：</strong>{{ s.trigger_action or '-' }}</p>
+        <div class="flex" style="flex-wrap:wrap; gap:6px; font-size:12px;">
+            {% if s.chat_atmosphere %}<span class="text-muted">💬 {{ s.chat_atmosphere }}</span>{% endif %}
+            {% if s.tags %}<span class="text-muted">🏷 {{ s.tags }}</span>{% endif %}
+        </div>
+        <div class="flex" style="margin-top:8px; gap:6px;">
+            <button class="btn btn-outline btn-xs" onclick="openEdit({{ s.id }})">编辑</button>
+            <form class="inline-form" method="POST" action="{{ url_for('scenario_delete', cid=s.id) }}" onsubmit="return confirm('确定删除?')" style="display:inline;">
+                <button class="btn btn-danger btn-xs">删除</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty"><div class="emoji">🔥</div>暂无场景</div>
+    {% endif %}
+</div>
+
+<!-- 编辑弹窗 -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal" style="max-width:650px;">
+        <h2>编辑场景 #<span id="editIdLabel"></span></h2>
+        <form method="POST" id="editForm">
+            <div class="grid-3">
+                <div class="form-group"><label>场景类型</label><select name="scenario_type" id="edit_type">
+                    <option>限时秒杀</option><option>痛点讲解</option><option>功能演示</option>
+                    <option>信任背书</option><option>价格锚点</option><option>逼单话术</option>
+                    <option>观众互动</option><option>其他</option>
+                </select></div>
+                <div class="form-group"><label>发生时间</label><input type="time" name="timestamp" id="edit_time"></div>
+                <div class="form-group"><label>关联话术</label><select name="script_id" id="edit_script"><option value="">-- 不关联 --</option></select></div>
+                <div class="form-group"><label>🔥 爆点描述</label><textarea name="trigger_action" id="edit_action" rows="3"></textarea></div>
+                <div class="form-group"><label>弹幕氛围</label><input type="text" name="chat_atmosphere" id="edit_atmo" placeholder="刷屏、都在问"></div>
+                <div class="form-group"><label>标签</label><input type="text" name="tags" id="edit_tags" placeholder="爆点,可复用"></div>
+                <div class="form-group"><label>触发前订单</label><input type="number" name="before_orders" id="edit_before"></div>
+                <div class="form-group"><label>触发后订单</label><input type="number" name="after_orders" id="edit_after"></div>
+                <div class="form-group"><label>转化提升</label><input type="number" name="conversion_rate_delta" id="edit_delta"></div>
+            </div>
+            <div class="flex" style="gap:12px; margin-top:16px;">
+                <button type="submit" class="btn btn-primary">保存</button>
+                <button type="button" class="btn btn-outline" onclick="closeEdit()">取消</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block extra_scripts %}
+<script>
+// 加载话术下拉
+function loadScriptSelect(elId) {
+    fetch('/api/scripts?limit=200')
+        .then(r => r.json())
+        .then(data => {
+            var opts = '<option value=\"\">-- 不关联 --</option>';
+            data.forEach(s => {
+                opts += '<option value=\"'+s.id+'\">['+s.script_type+'] '+(s.question_text||'通用').substring(0,25)+' (⭐'+s.effectiveness_score+')</option>';
+            });
+            document.getElementById(elId).innerHTML = opts;
+            if (elId === 'edit_script') document.getElementById('add_script_select').innerHTML = opts;
+        });
+}
+// 初始化两个话术下拉
+loadScriptSelect('add_script_select');
+loadScriptSelect('edit_script');
+
+// 编辑
+function openEdit(cid) {
+    fetch('/api/scenario/' + cid)
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById('editIdLabel').textContent = d.id;
+            document.getElementById('editForm').action = '/scenarios/' + d.id + '/edit';
+            document.getElementById('edit_type').value = d.scenario_type || '';
+            document.getElementById('edit_time').value = d.timestamp || '';
+            document.getElementById('edit_script').value = d.script_id || '';
+            document.getElementById('edit_action').value = d.trigger_action || '';
+            document.getElementById('edit_atmo').value = d.chat_atmosphere || '';
+            document.getElementById('edit_tags').value = d.tags || '';
+            document.getElementById('edit_before').value = d.before_orders || 0;
+            document.getElementById('edit_after').value = d.after_orders || 0;
+            document.getElementById('edit_delta').value = d.conversion_rate_delta || 0;
+            document.getElementById('editModal').classList.add('show');
+        });
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('show'); }
+document.getElementById('editModal').addEventListener('click', function(e) { if (e.target === this) closeEdit(); });
+</script>
+{% endblock %}

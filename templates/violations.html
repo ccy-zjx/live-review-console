@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}违规管理 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>🚫 违规管理</h1>
+    <p>抖音违规词库 + 违规案例 + 实时话术检查</p>
+</div>
+
+<div class="grid-2">
+    <!-- 左侧：违规词库 -->
+    <div>
+        <!-- 分类筛选 -->
+        <div class="card mb-16">
+            <div class="flex" style="flex-wrap:wrap;gap:8px;">
+                <a href="?" class="btn btn-sm {% if not current_category %}btn-primary{% else %}btn-outline{% endif %}">全部</a>
+                {% for c in categories %}
+                <a href="?category={{ c.category }}" class="btn btn-sm {% if current_category == c.category %}btn-primary{% else %}btn-outline{% endif %}">
+                    {{ c.category }} ({{ c.cnt }})
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 新增违规词 -->
+        <div class="card">
+            <div class="card-header"><h2>+ 添加违规词</h2></div>
+            <form method="POST" action="{{ url_for('violation_add') }}">
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>违规词 *</label>
+                        <input type="text" name="keyword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>分类</label>
+                        <select name="category">
+                            <option>极限词</option><option>虚假宣传</option><option>医疗宣称</option>
+                            <option>政治敏感</option><option>平台禁词</option><option>诱导互动</option>
+                            <option>恶意对比</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>严重度</label>
+                        <select name="severity">
+                            <option>警告</option><option>限流</option><option>封禁</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>替代说法</label>
+                        <input type="text" name="alternative" placeholder="安全的替代词">
+                    </div>
+                    <div class="form-group">
+                        <label>来源</label>
+                        <input type="text" name="source" placeholder="如：抖音官方公告">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+        </div>
+
+        <!-- 违规词列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h2>违规词库 ({{ rules|length }})</h2>
+                <a href="{{ url_for('export_csv', data_type='violations') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+            </div>
+            {% if rules %}
+            <table>
+                <tr><th>违规词</th><th>分类</th><th>严重度</th><th>替代</th><th>操作</th></tr>
+                {% for r in rules %}
+                <tr>
+                    <td><strong class="text-danger">{{ r.keyword }}</strong></td>
+                    <td><span class="badge badge-warning">{{ r.category }}</span></td>
+                    <td>
+                        <span class="badge {% if r.severity == '封禁' %}badge-danger{% elif r.severity == '限流' %}badge-warning{% else %}badge-info{% endif %}">
+                            {{ r.severity }}
+                        </span>
+                    </td>
+                    <td>{{ (r.alternative or '')[:20] }}</td>
+                    <td>
+                        <form class="inline-form" method="POST" action="{{ url_for('violation_delete', vid=r.id) }}" onsubmit="return confirm('确定删除?')">
+                            <button class="btn btn-danger btn-xs">删除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <div class="empty"><div class="emoji">🚫</div>暂无违规词</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 右侧：实时检查 + 案例 -->
+    <div>
+        <!-- 实时话术检查 -->
+        <div class="card">
+            <div class="card-header"><h2>🔍 实时话术检查</h2></div>
+            <form method="POST" action="{{ url_for('violation_check') }}" id="check-form">
+                <div class="form-group">
+                    <label>输入要检查的话术文本</label>
+                    <textarea name="text" rows="3" placeholder="输入主播要说的话，检查是否包含违规词...">{{ text or '' }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">检查</button>
+            </form>
+            <div id="check-result"></div>
+        </div>
+
+        <!-- 新增案例 -->
+        <div class="card">
+            <div class="card-header"><h2>+ 添加违规案例</h2></div>
+            <form method="POST" action="{{ url_for('case_add') }}">
+                <div class="form-group">
+                    <label>案例标题 *</label>
+                    <input type="text" name="case_title" required placeholder="如：某香薰品牌使用'第一'被下播">
+                </div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>平台</label>
+                        <input type="text" name="platform" value="抖音">
+                    </div>
+                    <div class="form-group">
+                        <label>品牌（可匿名）</label>
+                        <input type="text" name="brand_name" placeholder="某品牌">
+                    </div>
+                    <div class="form-group">
+                        <label>违规类型</label>
+                        <input type="text" name="violation_type" placeholder="极限词/虚假宣传">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>违规原文</label>
+                    <textarea name="original_content" rows="2" placeholder="具体的违规话术内容"></textarea>
+                </div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>处罚结果</label>
+                        <input type="text" name="penalty" placeholder="如：直播间封禁24小时">
+                    </div>
+                    <div class="form-group">
+                        <label>教训总结</label>
+                        <input type="text" name="lesson" placeholder="从中学到了什么">
+                    </div>
+                    <div class="form-group">
+                        <label>预防措施</label>
+                        <input type="text" name="preventive_measure" placeholder="如何避免">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">添加案例</button>
+            </form>
+        </div>
+
+        <!-- 案例列表 -->
+        <div class="card">
+            <div class="card-header">
+                <h2>违规案例 ({{ cases|length }})</h2>
+                <a href="{{ url_for('export_csv', data_type='cases') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+            </div>
+            {% if cases %}
+            {% for c in cases %}
+            <div class="card" style="margin-bottom:12px; padding:16px;">
+                <div class="flex-between mb-16">
+                    <strong>{{ c.case_title }}</strong>
+                    <span class="badge badge-danger">{{ c.violation_type }}</span>
+                </div>
+                <p class="text-muted" style="font-size:12px;">平台: {{ c.platform }} | 品牌: {{ c.brand_name }} | 处罚: {{ c.penalty }}</p>
+                {% if c.original_content %}
+                <p style="font-size:13px; margin-top:8px;"><strong>违规原文:</strong> <span class="text-danger">{{ c.original_content[:100] }}</span></p>
+                {% endif %}
+                {% if c.lesson %}
+                <p style="font-size:13px; margin-top:4px;"><strong>教训:</strong> {{ c.lesson[:100] }}</p>
+                {% endif %}
+                <div class="mt-8">
+                    <form class="inline-form" method="POST" action="{{ url_for('case_delete', cid=c.id) }}" onsubmit="return confirm('确定删除?')">
+                        <button class="btn btn-danger btn-xs">删除</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty"><div class="emoji">📋</div>暂无违规案例</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+document.getElementById('check-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var form = this;
+    var btn = form.querySelector('button');
+    btn.textContent = '检查中...';
+    btn.disabled = true;
+    fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form)
+    }).then(r=>r.text()).then(html => {
+        document.getElementById('check-result').innerHTML = html;
+        btn.textContent = '检查';
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

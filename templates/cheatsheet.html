@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}速查表 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📋 速查表</h1>
+    <p>场景类型 → 最佳触发动作 | 话术类型 → 最高评分话术</p>
+</div>
+
+<div class="grid-2">
+    <!-- 场景速查 -->
+    <div class="card">
+        <div class="card-header"><h2>🔥 场景→最佳动作</h2></div>
+        {% for stype, items in scenarios.items() %}
+        <div style="margin-bottom:12px;">
+            <h3 style="font-size:14px; margin-bottom:4px;">
+                <span class="badge badge-purple">{{ stype }}</span>
+            </h3>
+            {% for item in items[:2] %}
+            <div style="font-size:13px; padding:6px 10px; background:#f8f9fa; border-radius:6px; margin-bottom:4px;">
+                <div class="flex-between">
+                    <span>{{ item.trigger_action[:60] }}{% if item.trigger_action|length > 60 %}...{% endif %}</span>
+                    <span class="badge badge-success">+{{ "%.1f" % item.avg_delta }}</span>
+                </div>
+                <span class="text-muted" style="font-size:11px;">使用 {{ item.cnt }} 次</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 话术速查 -->
+    <div class="card">
+        <div class="card-header"><h2>📝 话术→最佳版本</h2></div>
+        {% for stype, items in scripts.items() %}
+        <div style="margin-bottom:12px;">
+            <h3 style="font-size:14px; margin-bottom:4px;">
+                <span class="badge badge-info">{{ stype }}</span>
+            </h3>
+            {% for s in items[:2] %}
+            <div style="font-size:13px; padding:8px 10px; background:#f8f9fa; border-radius:6px; margin-bottom:4px;">
+                <div class="flex-between">
+                    <strong>{{ (s.question_text or '通用')[:25] }}</strong>
+                    <span>⭐{{ s.effectiveness_score }}</span>
+                </div>
+                <p style="margin-top:4px; color:#555;">{{ s.script_text[:100] }}{% if s.script_text|length > 100 %}...{% endif %}</p>
+                <span class="text-muted" style="font-size:11px;">{{ s.version }} | 使用{{ s.usage_count or 0 }}次</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

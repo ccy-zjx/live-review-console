@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}数据导入 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📥 数据导入</h1>
+    <p>批量导入违规词、案例、问题库（支持 CSV / Excel）</p>
+</div>
+
+<!-- 模板下载 -->
+<div class="card">
+    <div class="card-header"><h2>📋 导入模板下载</h2></div>
+    <p class="text-muted mb-16">下载对应模板，按格式填写后上传导入</p>
+    <div class="flex" style="gap:12px;">
+        <a href="{{ url_for('static', filename='../import_templates/violations_template.csv') }}" class="btn btn-outline btn-sm">违规词模板</a>
+        <a href="{{ url_for('static', filename='../import_templates/cases_template.csv') }}" class="btn btn-outline btn-sm">案例模板</a>
+        <a href="{{ url_for('static', filename='../import_templates/questions_template.csv') }}" class="btn btn-outline btn-sm">问题模板</a>
+    </div>
+</div>
+
+<!-- 上传导入 -->
+<div class="card">
+    <div class="card-header"><h2>📤 上传文件</h2></div>
+    <form id="import-form" enctype="multipart/form-data">
+        <div class="grid-3">
+            <div class="form-group">
+                <label>导入类型</label>
+                <select name="type" required>
+                    <option value="violations">违规词</option>
+                    <option value="cases">违规案例</option>
+                    <option value="questions">问题库</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>选择文件 (CSV/Excel)</label>
+                <input type="file" name="file" accept=".csv,.xlsx,.xls" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">预览数据</button>
+    </form>
+    <div id="preview-area" class="mt-8"></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+document.getElementById('import-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var formData = new FormData(this);
+    var btn = this.querySelector('button');
+    btn.textContent = '解析中...';
+    btn.disabled = true;
+
+    fetch('/import/preview', { method:'POST', body:formData })
+    .then(r => r.text())
+    .then(html => {
+        document.getElementById('preview-area').innerHTML = html;
+        btn.textContent = '预览数据';
+        btn.disabled = false;
+    })
+    .catch(err => {
+        alert('文件解析失败: ' + err);
+        btn.textContent = '预览数据';
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

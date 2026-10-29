@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}首页仪表盘 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>📊 首页仪表盘</h1>
+    <p>图拉斯车载观景香薰 — 直播运营数据概览</p>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="value">{{ today_stats.count }}</div>
+        <div class="label">今日场次</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ today_stats.orders }}</div>
+        <div class="label">今日订单</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ "%.0f" % today_stats.gmv if today_stats.gmv else 0 }}</div>
+        <div class="label">今日 GMV (元)</div>
+    </div>
+    <div class="stat-card">
+        <div class="value">{{ violation_count }}</div>
+        <div class="label">违规词库</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- 高转化场景 TOP 5 -->
+    <div class="card">
+        <div class="card-header">
+            <h2>🔥 最近高转化场景</h2>
+            <a href="{{ url_for('scenarios_list') }}" class="btn btn-outline btn-sm">查看全部</a>
+        </div>
+        {% if top_scenarios %}
+        <table>
+            <tr><th>场景类型</th><th>触发动作</th><th>转化提升</th><th>日期</th></tr>
+            {% for s in top_scenarios %}
+            <tr>
+                <td><span class="badge badge-purple">{{ s.scenario_type or '-' }}</span></td>
+                <td>{{ (s.trigger_action or '')[:30] }}</td>
+                <td class="text-success">+{{ s.conversion_rate_delta }}</td>
+                <td class="text-muted">{{ s.session_date or '' }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="empty"><div class="emoji">🔥</div>暂无高转化场景记录</div>
+        {% endif %}
+    </div>
+
+    <!-- 最佳话术 TOP 5 -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📝 最佳话术排行</h2>
+            <a href="{{ url_for('scripts_list') }}" class="btn btn-outline btn-sm">查看全部</a>
+        </div>
+        {% if top_scripts %}
+        <table>
+            <tr><th>关联问题</th><th>话术版本</th><th>评分</th><th>使用次数</th></tr>
+            {% for s in top_scripts %}
+            <tr>
+                <td>{{ (s.question_text or '')[:25] }}</td>
+                <td><span class="badge badge-info">{{ s.version }}</span></td>
+                <td>{{ "⭐" * ((s.effectiveness_score|int)//1) }} {{ s.effectiveness_score }}</td>
+                <td>{{ s.usage_count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="empty"><div class="emoji">📝</div>暂有话术</div>
+        {% endif %}
+    </div>
+
+    <!-- 高频问题 TOP 10 -->
+    <div class="card">
+        <div class="card-header">
+            <h2>❓ 高频问题 TOP 10</h2>
+            <a href="{{ url_for('questions_list') }}" class="btn btn-outline btn-sm">查看全部</a>
+        </div>
+        {% if top_questions %}
+        <table>
+            <tr><th>问题</th><th>分类</th><th>频次</th><th>难度</th></tr>
+            {% for q in top_questions %}
+            <tr>
+                <td><a href="{{ url_for('question_detail', qid=q.id) }}">{{ (q.question_text)[:40] }}</a></td>
+                <td><span class="badge badge-purple">{{ q.category or '未分类' }}</span></td>
+                <td>{{ q.frequency }}</td>
+                <td>{{ q.difficulty }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <div class="empty"><div class="emoji">❓</div>暂无问题记录</div>
+        {% endif %}
+    </div>
+
+    <!-- A/B 测试汇总 -->
+    <div class="card">
+        <div class="card-header">
+            <h2>⚖️ A/B 测试概览</h2>
+            <a href="{{ url_for('ab_tests_list') }}" class="btn btn-outline btn-sm">查看全部</a>
+        </div>
+        {% if ab_stats and ab_stats.total and ab_stats.total > 0 %}
+        <div class="stats-row" style="margin-bottom:0;">
+            <div class="stat-card"><div class="value">{{ ab_stats.total }}</div><div class="label">总测试数</div></div>
+            <div class="stat-card"><div class="value">{{ ab_stats.a_wins }}</div><div class="label">A 胜出</div></div>
+            <div class="stat-card"><div class="value">{{ ab_stats.b_wins }}</div><div class="label">B 胜出</div></div>
+            <div class="stat-card"><div class="value">{{ ab_stats.ties }}</div><div class="label">平局</div></div>
+        </div>
+        {% else %}
+        <div class="empty"><div class="emoji">⚖️</div>暂无 A/B 测试</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 快速入口 -->
+<div class="card">
+    <div class="card-header"><h2>⚡ 快速操作</h2></div>
+    <div class="flex" style="flex-wrap:wrap;gap:12px;">
+        <a href="{{ url_for('sessions_list') }}" class="btn btn-primary">+ 新场次</a>
+        <a href="{{ url_for('scenarios_list') }}" class="btn btn-outline">+ 记录场景</a>
+        <a href="{{ url_for('questions_list') }}" class="btn btn-outline">+ 添加问题</a>
+        <a href="{{ url_for('scripts_list') }}" class="btn btn-outline">+ 录入话术</a>
+        <a href="{{ url_for('search_page') }}" class="btn btn-outline">🔍 快速搜索</a>
+        <a href="{{ url_for('violations_list') }}" class="btn btn-outline">🚫 违规检查</a>
+    </div>
+</div>
+{% endblock %}

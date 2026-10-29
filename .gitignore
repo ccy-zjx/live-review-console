@@ -1,0 +1,9 @@
+# 业务数据与本地文件，勿上传
+*.sqlite
+*.db
+__pycache__/
+*.pyc
+instance/
+uploads/
+*.log
+.DS_Store

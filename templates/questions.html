@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}问题库 - 直播中控台{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>❓ 问题库</h1>
+    <p>管理观众高频提问，按频次和分类排序</p>
+</div>
+
+<!-- 分类筛选 -->
+<div class="card mb-16">
+    <div class="flex" style="flex-wrap:wrap;gap:8px;">
+        <a href="?" class="btn btn-sm {% if not current_category %}btn-primary{% else %}btn-outline{% endif %}">全部</a>
+        {% for c in categories %}
+        <a href="?category={{ c.category }}" class="btn btn-sm {% if current_category == c.category %}btn-primary{% else %}btn-outline{% endif %}">
+            {{ c.category }} ({{ c.cnt }})
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 新增问题 -->
+<div class="card">
+    <div class="card-header"><h2>+ 记录问题</h2></div>
+    <form method="POST" action="{{ url_for('question_add') }}">
+        <div class="grid-3">
+            <div class="form-group">
+                <label>问题内容 *</label>
+                <input type="text" name="question_text" placeholder="观众问的具体问题" required>
+            </div>
+            <div class="form-group">
+                <label>分类</label>
+                <select name="category">
+                    <option value="">-- 选择 --</option>
+                    <option>产品</option><option>价格</option><option>物流</option>
+                    <option>售后</option><option>功能</option><option>竞品</option>
+                    <option>活动</option><option>其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>难度</label>
+                <select name="difficulty">
+                    <option>简单</option><option selected>中等</option><option>困难</option><option>敏感</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>敏感问题</label>
+                <select name="is_sensitive">
+                    <option value="0">否</option><option value="1">是</option>
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">记录问题</button>
+    </form>
+</div>
+
+<!-- 问题列表 -->
+<div class="card">
+    <div class="card-header">
+        <h2>问题列表 ({{ questions|length }})</h2>
+        <a href="{{ url_for('export_csv', data_type='questions') }}" class="btn btn-outline btn-sm">导出 CSV</a>
+    </div>
+    {% if questions %}
+    <table>
+        <tr><th>ID</th><th>问题</th><th>分类</th><th>频次</th><th>难度</th><th>敏感</th><th>最近出现</th><th>操作</th></tr>
+        {% for q in questions %}
+        <tr>
+            <td>{{ q.id }}</td>
+            <td>
+                <a href="{{ url_for('question_detail', qid=q.id) }}">{{ q.question_text[:45] }}{% if q.question_text|length > 45 %}...{% endif %}</a>
+            </td>
+            <td><span class="badge badge-purple">{{ q.category or '未分类' }}</span></td>
+            <td><strong>{{ q.frequency }}</strong></td>
+            <td>{{ q.difficulty }}</td>
+            <td>{% if q.is_sensitive %}<span class="badge badge-danger">敏感</span>{% else %}-{% endif %}</td>
+            <td class="text-muted">{{ q.last_seen or '-' }}</td>
+            <td class="flex">
+                <form class="inline-form" method="POST" action="{{ url_for('question_delete', qid=q.id) }}" onsubmit="return confirm('确定删除?')">
+                    <button class="btn btn-danger btn-xs">删除</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="empty"><div class="emoji">❓</div>暂无问题</div>
+    {% endif %}
+</div>
+{% endblock %}
